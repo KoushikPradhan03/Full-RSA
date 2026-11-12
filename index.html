@@ -1,1 +1,582 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1a0f0a;--panel:#241510;--line:#3a2418;--gold:#e8b84a;--copper:#c8843a;--text:#f3e9df;--muted:#a58f7d}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'Outfit',sans-serif;min-height:100vh;line-height:1.45}
+h1,h2,h3,.brand{font-family:'Playfair Display',serif}
+button,input,select,textarea{font:inherit;color:inherit}
+.hidden{display:none!important}.gold{color:var(--gold)}.muted{color:var(--muted)}.small{font-size:.85rem}.tiny{font-size:.75rem}
+.center{text-align:center}.mono{font-family:'JetBrains Mono',monospace}.spaced{letter-spacing:.2em}
+.between{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.nav{position:sticky;top:0;z-index:20;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 24px;background:rgba(26,15,10,.96);border-bottom:1px solid var(--line);flex-wrap:wrap}
+.brand{font-size:1.4rem;font-weight:700}
+.role-tag{font-family:'JetBrains Mono',monospace;font-size:.65rem;text-transform:uppercase;color:var(--gold);border:1px solid var(--line);padding:2px 8px;border-radius:99px;margin-left:8px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{background:none;border:0;padding:8px 16px;border-radius:8px;color:var(--muted);cursor:pointer;font-weight:500}
+.tab.active{background:var(--line);color:var(--gold)}
+.count{background:var(--gold);color:#1a0f0a;border-radius:99px;padding:0 7px;font-size:.75rem;font-weight:700;margin-left:4px}
+.btn{background:var(--copper);color:#1a0f0a;border:0;border-radius:8px;padding:10px 18px;font-weight:600;cursor:pointer}
+.btn:hover{filter:brightness(1.12)}.btn:disabled{opacity:.4;cursor:not-allowed}
+.ghost{background:transparent;color:var(--text);border:1px solid var(--line)}
+.danger{background:#7a2a22;color:#fff}
+.sm{padding:5px 12px;font-size:.85rem}
+.wide{width:100%}.grow{flex:1}
+label{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin:12px 0 6px;font-weight:600}
+input,select,textarea{width:100%;background:#2d1b13;border:1px solid var(--line);border-radius:8px;padding:10px 12px;outline:none}
+input:focus,select:focus,textarea:focus{border-color:var(--copper)}
+select option{background:#2d1b13}
+select.inl{width:auto;padding:5px 8px;font-size:.85rem}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;align-items:end}
+.container{max-width:1280px;margin:0 auto;padding:22px}.narrow{max-width:860px}
+.ptitle{margin:8px 0 16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px;margin-bottom:18px}
+.hero{padding:60px 20px;text-align:center;background:linear-gradient(rgba(26,15,10,.7),rgba(26,15,10,.92)),#2a1710}
+.hero h1{font-size:3.4rem;margin:6px 0}
+.pills{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+.pill{background:var(--panel);border:1px solid var(--line);color:var(--muted);padding:9px 18px;border-radius:99px;cursor:pointer;font-weight:500}
+.pill.active{background:var(--copper);color:#1a0f0a;border-color:var(--copper)}
+.stitle{display:flex;align-items:center;gap:14px;margin-bottom:18px}.stitle i{flex:1;height:1px;background:var(--line)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px}
+.grid-sm{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;margin:16px 0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.thumb{position:relative;height:170px;background:linear-gradient(135deg,#3a2012,#2a1710 60%,#4a2a14);overflow:hidden}
+.thumb::before{content:attr(data-e);position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:4rem;opacity:.55}
+.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card.off .thumb{filter:grayscale(1) brightness(.55)}
+.pbadge{position:absolute;top:10px;right:10px;background:var(--gold);color:#1a0f0a;font-weight:700;padding:3px 10px;border-radius:6px;font-size:.85rem;z-index:2}
+.ribbon{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(150,35,30,.92);padding:6px 16px;border-radius:4px;font-size:.72rem;letter-spacing:.12em;font-weight:600;white-space:nowrap;z-index:2}
+.tag{position:absolute;top:10px;left:10px;background:rgba(200,132,58,.92);color:#1a0f0a;font-size:.7rem;font-weight:600;padding:2px 9px;border-radius:5px;z-index:2}
+.cbody{padding:16px}.cbody h3{font-size:1.1rem;margin-bottom:4px}.desc{min-height:2.6em;margin-bottom:12px}
+.addrow{display:flex;gap:10px;align-items:center;margin-bottom:6px}
+.stepper{display:inline-flex;align-items:center;gap:10px;background:#2d1b13;border:1px solid var(--line);border-radius:8px;padding:5px 10px}
+.stepper button{background:none;border:0;color:var(--muted);cursor:pointer;font-size:1.1rem;padding:0 4px}
+.stepper span{min-width:18px;text-align:center;font-weight:600}
+.price{font-size:1.4rem;font-family:'Playfair Display',serif;font-weight:700}
+.switch{position:relative;display:inline-block;width:42px;height:24px;margin:0}
+.switch input{opacity:0;width:0;height:0}
+.switch span{position:absolute;inset:0;background:#4a3a30;border-radius:99px;cursor:pointer;transition:.2s}
+.switch span::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.switch input:checked+span{background:var(--copper)}.switch input:checked+span::before{transform:translateX(18px)}
+.oc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:14px}
+.lines{margin:10px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:8px 0}
+.lines .between{padding:2px 0}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.steps{display:flex;gap:6px;flex-wrap:wrap;margin:10px 0}
+.step{font-size:.72rem;padding:3px 10px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.step.done{background:#3a2a14;color:var(--gold);border-color:var(--copper)}
+.badge{font-size:.72rem;padding:3px 10px;border-radius:99px;font-weight:600;background:var(--line);color:var(--gold)}
+.st-Placed,.st-Pending{background:#3a3318;color:#e8d34a}
+.st-Preparing,.st-Confirmed{background:#1d3550;color:#7db8f0}
+.st-Ready,.st-Seated{background:#3a2a14;color:#f0a84a}
+.st-OutforDelivery{background:#2a1d4a;color:#b89af0}
+.st-Served,.st-Delivered,.st-Completed,.st-Paid{background:#173a22;color:#5fd17f}
+.st-Cancelled,.st-Unpaid{background:#4a1d1a;color:#f07a6e}
+.pick{display:flex;justify-content:space-between;align-items:center;gap:10px;background:#2d1b13;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.pick input{width:70px}
+.totalbar{border-top:1px solid var(--line);padding-top:14px}
+table.data{width:100%;border-collapse:collapse}
+table.data th,table.data td{text-align:left;padding:10px;border-bottom:1px solid var(--line);font-size:.9rem}
+table.data th{color:var(--gold);font-size:.72rem;letter-spacing:.1em;text-transform:uppercase}
+.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:22px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+.stat b{display:block;font-size:1.9rem;font-family:'Playfair Display',serif;color:var(--gold)}
+.tgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.tbl{border-radius:12px;padding:18px;text-align:center;background:var(--panel);border:2px solid var(--line)}
+.tbl.free{border-color:#2f6b40}.tbl.reserved{border-color:#b9892f}.tbl.busy{border-color:#a8433a}
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--copper);border-radius:14px;padding:24px;width:100%;max-width:460px;max-height:92vh;overflow:auto}
+.mact{display:flex;justify-content:flex-end;gap:10px;margin-top:18px}
+.toast{position:fixed;bottom:24px;right:24px;background:#173a22;color:#8ff0aa;padding:12px 20px;border-radius:10px;z-index:99;box-shadow:0 6px 20px rgba(0,0,0,.5)}
+.toast.err{background:#4a1d1a;color:#ffb3a8}
+.bill hr{border:0;border-top:1px dashed var(--muted);margin:10px 0}
+.bill table{width:100%;border-collapse:collapse;margin:10px 0}
+.bill td,.bill th{padding:4px 2px;text-align:left}.bill td:nth-child(n+2),.bill th:nth-child(n+2){text-align:right}
+@media print{body *{visibility:hidden}#bill,#bill *{visibility:visible}#bill{position:absolute;left:0;top:0;width:100%;background:#fff;color:#000;padding:20px}}
+.login{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;background:linear-gradient(rgba(20,10,5,.8),rgba(20,10,5,.9)),#1a0f0a}
+.lcard{width:100%;max-width:460px;background:rgba(40,20,8,.92);border:1px solid #8a6a2a;border-top:3px solid var(--gold);border-bottom:3px solid var(--gold);border-radius:6px;padding:34px 40px;box-shadow:0 0 50px rgba(0,0,0,.6)}
+.lbrand{font-family:'Playfair Display',serif;font-size:2.2rem;font-weight:600;color:var(--gold);text-align:center}
+.gline{border:0;border-top:1px solid #5a3a1a;margin:14px 0}
+.roles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.role{background:transparent;border:1px solid #5a3a1a;color:#8a6a40;padding:9px 4px;cursor:pointer;font-weight:600;font-size:.85rem}
+.role.active{background:#5a3a14;color:var(--gold);border-color:var(--gold);box-shadow:0 0 12px rgba(232,184,74,.35)}
+.hint{font-size:.72rem;color:#7a6652;margin-top:6px}
+.bgold{width:100%;margin-top:22px;border:0;padding:14px;font-weight:700;letter-spacing:.18em;cursor:pointer;color:#1a0f0a;background:linear-gradient(90deg,#f5d36a,#d9800f);border-radius:6px;box-shadow:0 0 22px rgba(217,128,15,.45)}
+.link{margin-top:16px;color:var(--copper);cursor:pointer;font-size:.9rem;text-align:center}
+.demo{margin-top:16px;padding:12px;border:1px dashed #5a3a1a;border-radius:8px;font-size:.75rem;color:var(--muted);line-height:1.7}
+.foot{margin-top:16px;font-family:'Playfair Display',serif;font-style:italic;color:#a8782e;font-size:.9rem}
+</style>
+</head>
+<body>
+<div id="app"></div>
 
+<script>
+/* ================= data ================= */
+const KEY = 'hb_demo_db';
+const CATS = ['Starters', 'Mains', 'Desserts', 'Drinks'];
+const ICON = { Starters: '◈', Mains: '◉', Desserts: '◇', Drinks: '◎' };
+const EMOJI = { Starters: '🍢', Mains: '🍛', Desserts: '🍮', Drinks: '🥤' };
+const TABLES = 10;
+const FLOW = {
+  'Dine-in': ['Placed', 'Preparing', 'Ready', 'Served'],
+  'Takeaway': ['Placed', 'Preparing', 'Ready', 'Delivered'],
+  'Delivery': ['Placed', 'Preparing', 'Ready', 'Out for Delivery', 'Delivered']
+};
+const STATUSES = ['Placed', 'Preparing', 'Ready', 'Out for Delivery', 'Served', 'Delivered', 'Cancelled'];
+const TABS = {
+  customer: [['menu', 'Menu'], ['cart', 'Cart'], ['book', 'Book Table'], ['orders', 'My Orders']],
+  admin: [['dash', 'Dashboard'], ['menu', 'Menu Management'], ['orders', 'Orders'], ['bookings', 'Bookings'], ['staff', 'Staff']],
+  cashier: [['new', 'New Order'], ['orders', 'Orders & Delivery'], ['billing', 'Billing']],
+  waiter: [['tables', 'Tables'], ['orders', 'Dine-in Orders'], ['new', 'New Order'], ['bookings', 'Bookings']]
+};
+
+function seed() {
+  const m = (id, name, category, price, desc, max, available = true) => ({ id, name, category, price, desc, image: '', max, available });
+  return {
+    users: [
+      { id: 'u1', name: 'Restaurant Admin', email: 'admin@heavenbites.com', password: 'Admin@123', role: 'admin' },
+      { id: 'u2', name: 'Ravi Waiter', email: 'waiter@heavenbites.com', password: 'Waiter@123', role: 'waiter' },
+      { id: 'u3', name: 'Priya Cashier', email: 'cashier@heavenbites.com', password: 'Cashier@123', role: 'cashier' },
+      { id: 'u4', name: 'Demo Customer', email: 'customer@heavenbites.com', password: 'Customer@123', role: 'customer' }
+    ],
+    menu: [
+      m('m1', 'Paneer Tikka', 'Starters', 260, 'Tandoor-grilled cottage cheese, mint chutney, onion rings', 5),
+      m('m2', 'Hara Bhara Kabab', 'Starters', 200, 'Spinach, peas & potato patties, tamarind dip', 5, false),
+      m('m3', 'Samosa Chaat', 'Starters', 160, 'Crispy samosas, yogurt, sev, chutneys, pomegranate', 6),
+      m('m4', 'Dahi Puri', 'Starters', 140, 'Hollow puris, spiced potato, sweet curd, chaat masala', 4),
+      m('m5', 'Butter Chicken', 'Mains', 320, 'Slow-cooked chicken in a velvety tomato-cream sauce', 4),
+      m('m6', 'Dal Makhani', 'Mains', 240, 'Black lentils simmered overnight with butter and cream', 4),
+      m('m7', 'Paneer Butter Masala', 'Mains', 280, 'Cottage cheese cubes in rich tomato-cashew gravy', 4),
+      m('m8', 'Hyderabadi Biryani', 'Mains', 300, 'Fragrant basmati layered with spiced masala and saffron', 4),
+      m('m9', 'Garlic Naan', 'Mains', 90, 'Soft flatbread brushed with garlic butter, baked in clay tandoor', 8),
+      m('m10', 'Gulab Jamun', 'Desserts', 120, 'Warm milk dumplings in cardamom sugar syrup', 6),
+      m('m11', 'Rasmalai', 'Desserts', 150, 'Soft cheese discs in saffron-pistachio milk', 6),
+      m('m12', 'Kulfi Falooda', 'Desserts', 130, 'Traditional ice cream with vermicelli and rose syrup', 4),
+      m('m13', 'Masala Chai', 'Drinks', 60, 'Spiced Assam tea with ginger and cardamom', 8),
+      m('m14', 'Mango Lassi', 'Drinks', 100, 'Thick yogurt shake with Alphonso mango', 6),
+      m('m15', 'Fresh Lime Soda', 'Drinks', 80, 'Sweet, salted or mixed', 6),
+      m('m16', 'Cold Coffee', 'Drinks', 120, 'Chilled coffee blended with ice cream', 5)
+    ],
+    orders: [], bookings: [], nextOrder: 1001, nextBill: 1001, nextBooking: 101, nextUser: 5
+  };
+}
+let db;
+try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; }
+if (!db) { db = seed(); save(); }
+function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+
+/* ================= helpers ================= */
+const $ = s => document.querySelector(s);
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function money(n) { return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
+function todayStr() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
+function toast(m, err) { const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
+function act(fn) { try { fn(); } catch (e) { toast(e.message || String(e), true); } }
+function modal(html) { closeModal(); const m = document.createElement('div'); m.className = 'mbg'; m.id = 'modal'; m.innerHTML = '<div class="modal">' + html + '</div>'; document.body.appendChild(m); }
+function closeModal() { const m = $('#modal'); if (m) m.remove(); }
+const sub = o => o.lines.reduce((a, l) => a + l.price * l.qty, 0);
+const tax = o => Math.round(sub(o) * 5) / 100;
+const total = o => Math.round((sub(o) + tax(o)) * 100) / 100;
+const isClosed = o => ['Served', 'Delivered', 'Cancelled'].includes(o.status);
+const findOrder = id => db.orders.find(o => o.id === id);
+
+/* ================= session / state ================= */
+let me = null;
+try { me = JSON.parse(sessionStorage.getItem('hb_me')); } catch (e) { me = null; }
+let V = me ? TABS[me.role][0][0] : '';
+let L = { role: 'admin', mode: 'login' };
+let cat = 'Starters', cart = {}, sel = {}, cartType = 'Dine-in', cartInfo = '', adm = { cat: 'All' };
+
+function go(v) { V = v; render(); }
+function render() {
+  const app = $('#app');
+  if (!me) { app.innerHTML = loginView(); return; }
+  const tabs = TABS[me.role];
+  const n = Object.values(cart).reduce((a, b) => a + b, 0);
+  app.innerHTML = `<div class="nav">
+    <div class="brand"><span class="gold">◈</span> Heaven Bites <span class="role-tag">${me.role}</span></div>
+    <div class="tabs">${tabs.map(t => `<button class="tab ${t[0] === V ? 'active' : ''}" onclick="go('${t[0]}')">${t[1]}${t[0] === 'cart' && n ? `<span class="count">${n}</span>` : ''}</button>`).join('')}</div>
+    <div><span class="muted small">${esc(me.name)}</span> <button class="btn ghost sm" onclick="logout()">Logout</button></div></div>
+    ${V === 'menu' && me.role === 'customer' ? heroHtml() : ''}
+    <div class="container ${['cart', 'book', 'orders'].includes(V) && me.role === 'customer' ? 'narrow' : ''}">${(VIEWS[me.role][V] || (() => ''))()}</div>`;
+  if (V === 'new') afterTaker();
+}
+function heroHtml() { return `<div class="hero"><p class="mono gold small spaced">AUTHENTIC INDIAN FINE DINING</p><h1>Heaven Bites</h1><p class="muted">Crafted with passion. Served with love.</p></div>`; }
+
+/* ================= login ================= */
+function loginView() {
+  const c = L.role === 'customer', reg = L.mode === 'register';
+  return `<div class="login"><div class="lcard">
+    <div class="lbrand"><span class="gold">◆</span> Heaven Bites <span class="gold">◆</span></div>
+    <p class="spaced gold small center" style="margin-top:6px">AUTHENTIC INDIAN FINE DINING</p><hr class="gline">
+    <p class="spaced muted small center">RESTAURANT AUTOMATION SYSTEM</p>
+    <form onsubmit="doLogin(event)">
+      <label>Login as</label>
+      <div class="roles">${['admin', 'waiter', 'cashier', 'customer'].map(r => `<button type="button" class="role ${L.role === r ? 'active' : ''}" onclick="setRole('${r}')">${r[0].toUpperCase() + r.slice(1)}</button>`).join('')}</div>
+      ${reg ? '<label>Full name</label><input id="l-name" placeholder="Your name">' : ''}
+      <label>Email address</label><input id="l-email" type="email" placeholder="your@email.com" required>
+      <label>Password</label><input id="l-pw" type="password" placeholder="Must contain a special character" required>
+      <p class="hint">Password must include at least one special character (e.g. @, #, !)</p>
+      <button class="bgold">${reg ? 'CREATE ACCOUNT' : 'SIGN IN TO SYSTEM'}</button>
+    </form>
+    ${c ? `<p class="link" onclick="toggleMode()">${reg ? 'Already have an account? Sign in' : 'New customer? Create an account'}</p>` : ''}
+    <div class="demo"><b class="gold">Demo logins</b><br>Admin: admin@heavenbites.com / Admin@123<br>Waiter: waiter@heavenbites.com / Waiter@123<br>Cashier: cashier@heavenbites.com / Cashier@123<br>Customer: customer@heavenbites.com / Customer@123</div>
+    <p class="link" onclick="resetData()">Reset demo data</p>
+  </div><p class="foot">Crafted with passion. Served with love.</p></div>`;
+}
+function setRole(r) { L.role = r; if (r !== 'customer') L.mode = 'login'; render(); }
+function toggleMode() { L.mode = L.mode === 'login' ? 'register' : 'login'; render(); }
+function resetData() { if (confirm('Delete all orders, bookings and new accounts?')) { db = seed(); save(); cart = {}; toast('Demo data reset'); } }
+function doLogin(e) {
+  e.preventDefault();
+  act(() => {
+    const email = $('#l-email').value.trim().toLowerCase(), pw = $('#l-pw').value;
+    if (!/[^A-Za-z0-9]/.test(pw)) throw 'Password must include a special character';
+    if (L.mode === 'register') {
+      const name = $('#l-name').value.trim();
+      if (!name) throw 'Name is required';
+      if (pw.length < 6) throw 'Password needs at least 6 characters';
+      if (db.users.some(u => u.email === email)) throw 'Email already registered';
+      const u = { id: 'u' + (db.nextUser++), name, email, password: pw, role: 'customer' };
+      db.users.push(u); save(); startSession(u);
+    } else {
+      const u = db.users.find(x => x.email === email && x.password === pw && x.role === L.role);
+      if (!u) throw 'Invalid email, password or role';
+      startSession(u);
+    }
+  });
+}
+function startSession(u) { me = { id: u.id, name: u.name, role: u.role }; sessionStorage.setItem('hb_me', JSON.stringify(me)); V = TABS[me.role][0][0]; render(); }
+function logout() { me = null; cart = {}; sessionStorage.removeItem('hb_me'); render(); }
+
+/* ================= shared order/booking UI ================= */
+function orderCard(o, actions = '') {
+  const f = FLOW[o.type], idx = f.indexOf(o.status);
+  return `<div class="oc"><div class="between"><div><b class="mono">#${o.id}</b> <span class="muted small">${esc(o.createdAt)}</span></div>
+    <span class="badge st-${o.status.replace(/\s/g, '')}">${o.status}</span></div>
+    <div class="muted small">${esc(o.customerName)} · ${o.type}${o.type === 'Dine-in' ? ' · Table ' + esc(o.info) : (o.info ? ' · ' + esc(o.info) : '')}</div>
+    ${o.status === 'Cancelled' ? '' : `<div class="steps">${f.map((s, i) => `<span class="step ${i <= idx ? 'done' : ''}">${s}</span>`).join('')}</div>`}
+    <div class="lines">${o.lines.map(l => `<div class="between"><span>${l.qty} × ${esc(l.name)}</span><span>${money(l.price * l.qty)}</span></div>`).join('')}</div>
+    <div class="between"><div><b>${money(total(o))}</b> ${o.billNo ? `<span class="badge ${o.paid ? 'st-Paid' : 'st-Unpaid'}">${o.paid ? 'Paid · ' + o.payMethod : 'Bill ' + o.billNo}</span>` : ''}</div>
+    <div class="actions">${actions}</div></div></div>`;
+}
+function nextBtn(o) {
+  const f = FLOW[o.type], i = f.indexOf(o.status);
+  if (o.status === 'Cancelled' || i < 0 || i >= f.length - 1) return '';
+  return `<button class="btn sm" onclick="setStatus('${o.id}','${f[i + 1]}')">Mark ${f[i + 1]}</button>`;
+}
+function cancelBtn(o) { return isClosed(o) ? '' : `<button class="btn sm danger" onclick="setStatus('${o.id}','Cancelled')">Cancel</button>`; }
+function setStatus(id, status) {
+  act(() => {
+    const o = findOrder(id);
+    if (me.role === 'waiter' && !(o.type === 'Dine-in' && ['Preparing', 'Ready', 'Served'].includes(status))) throw 'Waiters can only update dine-in orders';
+    if (isClosed(o) && me.role !== 'admin') throw 'This order is already closed';
+    o.status = status; save(); toast('Order #' + id + ' → ' + status); render();
+  });
+}
+function bookingCard(b, actions = '') {
+  return `<div class="oc"><div class="between"><div><b class="mono">#${b.id}</b> <span class="muted small">${esc(b.date)} · ${esc(b.time)}</span></div><span class="badge st-${b.status}">${b.status}</span></div>
+    <div class="muted small">${esc(b.customerName)} · ${b.guests} guests · 📞 ${esc(b.phone)}</div>
+    <div class="between" style="margin-top:8px"><b>Table ${b.table}</b><div class="actions">${actions}</div></div></div>`;
+}
+function bookingActions(b) {
+  const nx = { Pending: ['Confirmed', 'Confirm'], Confirmed: ['Seated', 'Seat'], Seated: ['Completed', 'Complete'] }[b.status];
+  let h = nx ? `<button class="btn sm" onclick="setBooking('${b.id}','${nx[0]}')">${nx[1]}</button>` : '';
+  if (!['Completed', 'Cancelled'].includes(b.status)) h += `<button class="btn sm danger" onclick="setBooking('${b.id}','Cancelled')">Cancel</button>`;
+  return h;
+}
+function setBooking(id, status) { act(() => { db.bookings.find(b => b.id === id).status = status; save(); toast('Booking updated'); render(); }); }
+function showBill(id) {
+  const o = findOrder(id);
+  modal(`<div id="bill" class="bill"><h2 class="center">Heaven Bites</h2><p class="center small muted">Authentic Indian Fine Dining</p><hr>
+    <div class="between small"><span>Bill: <b>${esc(o.billNo || '—')}</b></span><span>${esc(o.createdAt)}</span></div>
+    <div class="small">Order #${o.id} · ${o.type}${o.type === 'Dine-in' ? ' · Table ' + esc(o.info) : ''}<br>Customer: ${esc(o.customerName)}</div>
+    <table><tr><th>Item</th><th>Qty</th><th>Rate</th><th>Amt</th></tr>${o.lines.map(l => `<tr><td>${esc(l.name)}</td><td>${l.qty}</td><td>${money(l.price)}</td><td>${money(l.price * l.qty)}</td></tr>`).join('')}</table><hr>
+    <div class="between"><span>Subtotal</span><span>${money(sub(o))}</span></div>
+    <div class="between"><span>GST (5%)</span><span>${money(tax(o))}</span></div>
+    <div class="between"><b>TOTAL</b><b>${money(total(o))}</b></div><hr>
+    <p class="center small">${o.paid ? 'PAID via ' + o.payMethod : 'PAYMENT PENDING'}</p><p class="center small">Thank you! Visit again.</p></div>
+    <div class="mact"><button class="btn ghost" onclick="closeModal()">Close</button><button class="btn" onclick="window.print()">Print</button></div>`);
+}
+
+/* ================= placing orders ================= */
+function makeOrder(type, info, name, items) {
+  info = (info || '').trim();
+  if (type === 'Dine-in' && !info) throw 'Select a table number';
+  if (type === 'Delivery' && !info) throw 'Delivery address is required';
+  const lines = [];
+  for (const id in items) {
+    const q = items[id]; if (!(q > 0)) continue;
+    const m = db.menu.find(x => x.id === id); if (!m) continue;
+    if (!m.available) throw m.name + ' is currently unavailable';
+    if (q > m.max) throw 'Max ' + m.max + ' per order for ' + m.name;
+    lines.push({ id, name: m.name, price: m.price, qty: q });   // price snapshot
+  }
+  if (!lines.length) throw 'Your cart is empty';
+  const cust = me.role === 'customer';
+  const o = { id: String(db.nextOrder++), customerId: cust ? me.id : 'walk-in', customerName: cust ? me.name : ((name || '').trim() || 'Walk-in'),
+    type, info: type === 'Takeaway' ? '' : info, status: 'Placed', createdAt: new Date().toLocaleString('en-IN'), paid: false, billNo: '', payMethod: '', lines };
+  db.orders.unshift(o); save(); return o;
+}
+function infoField(type, id, val) {
+  if (type === 'Dine-in') return `<label>Table number</label><select id="${id}" onchange="cartInfo=this.value">${Array.from({ length: TABLES }, (_, i) => `<option ${String(i + 1) === val ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>`;
+  if (type === 'Delivery') return `<label>Delivery address</label><input id="${id}" value="${esc(val)}" oninput="cartInfo=this.value" placeholder="Full address">`;
+  return '';
+}
+
+/* ---- order taker (cashier + waiter) ---- */
+function takerView(types) {
+  const items = db.menu.filter(i => i.available);
+  return `<h2 class="ptitle">${me.role === 'waiter' ? 'Take a Table Order' : 'Take New Order'}</h2><div class="panel">
+    <div class="row"><div><label>Customer name</label><input id="ot-name" placeholder="Walk-in"></div>
+    <div><label>Order type</label><select id="ot-type" onchange="takerType()">${types.map(t => `<option>${t}</option>`).join('')}</select></div>
+    <div id="ot-info-wrap"></div></div>
+    <div class="grid-sm">${items.map(i => `<div class="pick"><div><b>${esc(i.name)}</b><div class="muted small">${money(i.price)} · max ${i.max}</div></div>
+      <input type="number" class="ot-qty" data-id="${i.id}" data-price="${i.price}" min="0" max="${i.max}" value="0" oninput="takerTotal()"></div>`).join('')}</div>
+    <div class="between totalbar"><b>Total (incl. GST): <span id="ot-total">₹0</span></b><button class="btn" onclick="takerSubmit()">Place order</button></div></div>`;
+}
+function afterTaker() { cartInfo = ''; takerType(); }
+function takerType() {
+  const t = $('#ot-type').value;
+  $('#ot-info-wrap').innerHTML = t === 'Dine-in' ? infoField(t, 'ot-info', '1') : infoField(t, 'ot-info', '');
+  if (t === 'Dine-in') cartInfo = '1';
+}
+function takerTotal() { let s = 0; document.querySelectorAll('.ot-qty').forEach(q => s += (+q.value || 0) * +q.dataset.price); $('#ot-total').textContent = money(s * 1.05); }
+function takerSubmit() {
+  act(() => {
+    const items = {}; document.querySelectorAll('.ot-qty').forEach(q => { if (+q.value > 0) items[q.dataset.id] = +q.value; });
+    const info = ($('#ot-info') || {}).value || '';
+    makeOrder($('#ot-type').value, info, $('#ot-name').value, items);
+    toast('Order placed'); V = me.role === 'waiter' ? 'orders' : 'orders'; render();
+  });
+}
+
+/* ================= customer views ================= */
+function custCard(i) {
+  const q = sel[i.id] || 1;
+  return `<div class="card ${i.available ? '' : 'off'}"><div class="thumb" data-e="${EMOJI[i.category]}">
+    ${i.image ? `<img src="${esc(i.image)}" alt="" onerror="this.remove()">` : ''}<span class="pbadge mono">${money(i.price)}</span>
+    ${i.available ? '' : '<span class="ribbon">CURRENTLY UNAVAILABLE</span>'}</div>
+    <div class="cbody"><h3>${esc(i.name)}</h3><p class="muted small desc">${esc(i.desc)}</p>
+    <div class="addrow"><div class="stepper"><button onclick="stepQty('${i.id}',-1)">−</button><span id="q-${i.id}">${q}</span><button onclick="stepQty('${i.id}',1)">+</button></div>
+    <button class="btn grow" ${i.available ? '' : 'disabled'} onclick="addCart('${i.id}')">Add</button></div>
+    <div class="mono muted tiny">Max ${i.max} per order</div></div></div>`;
+}
+function stepQty(id, d) { const m = db.menu.find(x => x.id === id); const n = Math.min(m.max, Math.max(1, (sel[id] || 1) + d)); sel[id] = n; $('#q-' + id).textContent = n; }
+function addCart(id) {
+  act(() => {
+    const m = db.menu.find(x => x.id === id), n = (cart[id] || 0) + (sel[id] || 1);
+    if (n > m.max) throw 'Max ' + m.max + ' per order for ' + m.name;
+    cart[id] = n; sel[id] = 1; toast(m.name + ' added'); render();
+  });
+}
+function chgCart(id, d) {
+  act(() => {
+    const m = db.menu.find(x => x.id === id), n = (cart[id] || 0) + d;
+    if (n <= 0) delete cart[id]; else if (n > m.max) throw 'Max ' + m.max + ' per order'; else cart[id] = n;
+    render();
+  });
+}
+function setCat(c) { cat = c; render(); }
+function setCartType(t) { cartType = t; cartInfo = t === 'Dine-in' ? '1' : ''; render(); }
+function placeCart() { act(() => { makeOrder(cartType, cartInfo, '', cart); cart = {}; toast('Order placed! 🎉'); V = 'orders'; render(); }); }
+function cancelOwnOrder(id) {
+  act(() => { const o = findOrder(id); if (o.status !== 'Placed') throw 'Order is already being prepared'; o.status = 'Cancelled'; save(); toast('Order cancelled'); render(); });
+}
+function cancelOwnBooking(id) {
+  act(() => { const b = db.bookings.find(x => x.id === id); if (!['Pending', 'Confirmed'].includes(b.status)) throw 'This booking can no longer be cancelled'; b.status = 'Cancelled'; save(); toast('Booking cancelled'); render(); });
+}
+function doBook() {
+  act(() => {
+    const date = $('#b-date').value, time = $('#b-time').value, guests = +$('#b-guests').value, phone = $('#b-phone').value.trim();
+    if (!/^[0-9+ -]{8,15}$/.test(phone)) throw 'Enter a valid phone number';
+    if (!date || date < todayStr()) throw 'Choose a valid date';
+    let t = 0;
+    for (let n = 1; n <= TABLES; n++) if (!db.bookings.some(b => b.status !== 'Cancelled' && b.date === date && b.time === time && b.table === n)) { t = n; break; }
+    if (!t) throw 'No tables free at that time. Try another slot.';
+    db.bookings.push({ id: 'B' + (db.nextBooking++), customerId: me.id, customerName: me.name, phone, date, time, guests, table: t, status: 'Pending' });
+    save(); toast('Table ' + t + ' reserved (pending confirmation)'); render();
+  });
+}
+
+/* ================= admin helpers ================= */
+function toggleAvail(id, v) { db.menu.find(m => m.id === id).available = v; save(); toast(v ? 'Now available' : 'Marked unavailable'); render(); }
+function delItem(id) { if (confirm('Delete this menu item?')) { db.menu = db.menu.filter(m => m.id !== id); save(); render(); } }
+function itemForm(id) {
+  const i = id ? db.menu.find(x => x.id === id) : { name: '', category: 'Starters', price: '', desc: '', image: '', max: 5 };
+  modal(`<h3>${id ? 'Edit' : 'Add'} menu item</h3>
+    <label>Name</label><input id="f-name" value="${esc(i.name)}">
+    <label>Category</label><select id="f-cat">${CATS.map(c => `<option ${c === i.category ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <label>Price (₹)</label><input id="f-price" type="number" min="0" value="${i.price}">
+    <label>Description</label><textarea id="f-desc" rows="2">${esc(i.desc)}</textarea>
+    <label>Image URL (optional)</label><input id="f-img" value="${esc(i.image)}" placeholder="https://...">
+    <label>Max per order</label><input id="f-max" type="number" min="1" max="20" value="${i.max}">
+    <div class="mact"><button class="btn ghost" onclick="closeModal()">Cancel</button><button class="btn" onclick="saveItem('${id || ''}')">Save</button></div>`);
+}
+function saveItem(id) {
+  act(() => {
+    const name = $('#f-name').value.trim(), price = parseFloat($('#f-price').value), max = parseInt($('#f-max').value, 10);
+    if (!name) throw 'Item name is required';
+    if (isNaN(price) || price < 0) throw 'Enter a valid price';
+    if (isNaN(max) || max < 1 || max > 20) throw 'Max per order must be 1 to 20';
+    const data = { name, category: $('#f-cat').value, price, desc: $('#f-desc').value.trim(), image: $('#f-img').value.trim(), max };
+    if (id) Object.assign(db.menu.find(m => m.id === id), data);
+    else db.menu.push({ id: 'm' + Date.now().toString(36), available: true, ...data });
+    save(); closeModal(); toast('Saved'); render();
+  });
+}
+function addStaff() {
+  act(() => {
+    const name = $('#s-name').value.trim(), email = $('#s-email').value.trim().toLowerCase(), pw = $('#s-pw').value, role = $('#s-role').value;
+    if (!name) throw 'Name is required';
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw 'Enter a valid email';
+    if (pw.length < 6 || !/[^A-Za-z0-9]/.test(pw)) throw 'Password needs 6+ characters and a special character';
+    if (db.users.some(u => u.email === email)) throw 'Email already registered';
+    db.users.push({ id: 'u' + (db.nextUser++), name, email, password: pw, role }); save(); toast('Staff added'); render();
+  });
+}
+
+/* ================= cashier billing ================= */
+function genBill(id) { act(() => { const o = findOrder(id); if (o.status === 'Cancelled') throw 'Cancelled orders cannot be billed'; if (!o.billNo) { o.billNo = 'HB-' + (db.nextBill++); save(); } render(); showBill(id); }); }
+function payBill(id) {
+  act(() => { const o = findOrder(id); if (!o.billNo) throw 'Generate the bill first'; o.paid = true; o.payMethod = $('#pm-' + id).value; save(); toast('Payment recorded'); render(); });
+}
+function billActions(o) {
+  if (!o.billNo) return `<button class="btn sm" onclick="genBill('${o.id}')">Generate bill</button>`;
+  return `<button class="btn sm ghost" onclick="showBill('${o.id}')">View bill</button><select id="pm-${o.id}" class="inl"><option>Cash</option><option>Card</option><option>UPI</option></select><button class="btn sm" onclick="payBill('${o.id}')">Mark paid</button>`;
+}
+
+/* ================= views ================= */
+const VIEWS = {
+  customer: {
+    menu() {
+      const list = db.menu.filter(i => i.category === cat);
+      return `<div class="pills">${CATS.map(c => `<button class="pill ${c === cat ? 'active' : ''}" onclick="setCat('${c}')">${ICON[c]} ${c}</button>`).join('')}</div>
+        <div class="stitle"><span class="gold">◈</span><h2>${cat}</h2><i></i></div><div class="grid">${list.map(custCard).join('') || '<p class="muted">No items yet.</p>'}</div>`;
+    },
+    cart() {
+      const ids = Object.keys(cart).filter(id => db.menu.find(m => m.id === id));
+      if (!ids.length) return '<h2 class="ptitle">Your Order</h2><div class="panel"><p class="center muted">Your cart is empty. Add something delicious from the menu.</p></div>';
+      let s = 0;
+      const rows = ids.map(id => { const m = db.menu.find(x => x.id === id); s += m.price * cart[id];
+        return `<div class="between" style="padding:10px 0;border-bottom:1px solid var(--line)"><span>${esc(m.name)} <span class="muted small">${money(m.price)}</span></span>
+        <span class="stepper"><button onclick="chgCart('${id}',-1)">−</button><span>${cart[id]}</span><button onclick="chgCart('${id}',1)">+</button></span><b>${money(m.price * cart[id])}</b></div>`; }).join('');
+      if (cartType === 'Dine-in' && !cartInfo) cartInfo = '1';
+      return `<h2 class="ptitle">Your Order</h2><div class="panel">${rows}
+        <div class="between" style="margin-top:10px"><span class="muted">Subtotal</span><span>${money(s)}</span></div>
+        <div class="between"><span class="muted">GST (5%)</span><span>${money(s * 0.05)}</span></div>
+        <div class="between"><b>Total</b><b class="gold">${money(s * 1.05)}</b></div>
+        <div class="row" style="margin-top:16px"><div><label>Order type</label><select onchange="setCartType(this.value)">${['Dine-in', 'Takeaway', 'Delivery'].map(t => `<option ${t === cartType ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+        <div>${infoField(cartType, 'c-info', cartInfo)}</div></div>
+        <button class="btn wide" style="margin-top:18px" onclick="placeCart()">Place order</button></div>`;
+    },
+    book() {
+      const mine = db.bookings.filter(b => b.customerId === me.id).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      const slots = Array.from({ length: 11 }, (_, i) => String(12 + i).padStart(2, '0') + ':00');
+      return `<h2 class="ptitle">Book a Table</h2><div class="panel"><div class="row">
+        <div><label>Date</label><input type="date" id="b-date" min="${todayStr()}" value="${todayStr()}"></div>
+        <div><label>Time</label><select id="b-time">${slots.map(s => `<option>${s}</option>`).join('')}</select></div>
+        <div><label>Guests</label><select id="b-guests">${Array.from({ length: 10 }, (_, i) => `<option>${i + 1}</option>`).join('')}</select></div>
+        <div><label>Phone</label><input id="b-phone" placeholder="98765 43210"></div></div>
+        <button class="btn" style="margin-top:18px" onclick="doBook()">Reserve table</button></div>
+        <h3 class="ptitle">My bookings</h3>${mine.map(b => bookingCard(b, ['Pending', 'Confirmed'].includes(b.status) ? `<button class="btn sm danger" onclick="cancelOwnBooking('${b.id}')">Cancel</button>` : '')).join('') || '<p class="muted">No bookings yet.</p>'}`;
+    },
+    orders() {
+      const mine = db.orders.filter(o => o.customerId === me.id);
+      return `<h2 class="ptitle">My Orders</h2>${mine.map(o => orderCard(o,
+        (o.billNo ? `<button class="btn sm ghost" onclick="showBill('${o.id}')">View bill</button>` : '') +
+        (o.status === 'Placed' ? `<button class="btn sm danger" onclick="cancelOwnOrder('${o.id}')">Cancel</button>` : ''))).join('') || '<p class="muted">You have not ordered anything yet.</p>'}`;
+    }
+  },
+
+  admin: {
+    dash() {
+      const active = db.orders.filter(o => !isClosed(o)).length, rev = db.orders.filter(o => o.paid).reduce((a, o) => a + total(o), 0);
+      const st = [['Total orders', db.orders.length], ['Active orders', active], ['Revenue (paid)', money(rev)],
+        ['Pending bookings', db.bookings.filter(b => b.status === 'Pending').length], ['Menu items', db.menu.length], ['Users', db.users.length]];
+      return `<h2 class="ptitle">Dashboard</h2><div class="statgrid">${st.map(x => `<div class="stat"><span class="muted small">${x[0]}</span><b>${x[1]}</b></div>`).join('')}</div>
+        <h3 class="ptitle">Recent orders</h3>${db.orders.slice(0, 4).map(o => orderCard(o)).join('') || '<p class="muted">No orders yet.</p>'}`;
+    },
+    menu() {
+      const list = db.menu.filter(i => adm.cat === 'All' || i.category === adm.cat);
+      return `<div class="between" style="margin-bottom:14px"><h3><span class="gold">◈</span> MANAGE MENU ITEMS <span class="muted small">${list.length} items</span></h3><button class="btn" onclick="itemForm()">+ Add Item</button></div>
+        <div class="pills">${['All', ...CATS].map(c => `<button class="pill ${adm.cat === c ? 'active' : ''}" onclick="adm.cat='${c}';render()">${c === 'All' ? 'All Categories' : c}</button>`).join('')}</div>
+        <div class="grid">${list.map(i => `<div class="card ${i.available ? '' : 'off'}"><div class="thumb" data-e="${EMOJI[i.category]}">${i.image ? `<img src="${esc(i.image)}" alt="" onerror="this.remove()">` : ''}
+          <span class="tag">${i.category}</span>${i.available ? '' : '<span class="ribbon">UNAVAILABLE</span>'}</div>
+          <div class="cbody"><h3>${esc(i.name)}</h3><p class="muted small desc">${esc(i.desc)}</p>
+          <div class="between"><span class="price">${money(i.price)}</span><span class="badge ${i.available ? 'st-Paid' : 'st-Cancelled'}">${i.available ? '● Available' : '● Unavailable'}</span></div>
+          <div class="between" style="margin-top:12px"><label class="switch"><input type="checkbox" ${i.available ? 'checked' : ''} onchange="toggleAvail('${i.id}',this.checked)"><span></span></label>
+          <div class="actions"><button class="btn sm ghost" onclick="itemForm('${i.id}')">Edit</button><button class="btn sm danger" onclick="delItem('${i.id}')">Delete</button></div></div></div></div>`).join('') || '<p class="muted">No items.</p>'}</div>`;
+    },
+    orders() {
+      return `<h2 class="ptitle">All Orders</h2>${db.orders.map(o => orderCard(o,
+        (o.billNo ? `<button class="btn sm ghost" onclick="showBill('${o.id}')">View bill</button>` : '') +
+        `<select class="inl" onchange="setStatus('${o.id}',this.value)">${STATUSES.map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select>`)).join('') || '<p class="muted">No orders.</p>'}`;
+    },
+    bookings() {
+      return `<h2 class="ptitle">Table Bookings</h2>${db.bookings.map(b => bookingCard(b, bookingActions(b))).join('') || '<p class="muted">No bookings.</p>'}`;
+    },
+    staff() {
+      return `<h2 class="ptitle">Staff & Users</h2><div class="panel"><h3>Add staff member</h3><div class="row">
+        <div><label>Name</label><input id="s-name"></div><div><label>Email</label><input id="s-email" type="email"></div>
+        <div><label>Password</label><input id="s-pw" placeholder="e.g. Pass@123"></div>
+        <div><label>Role</label><select id="s-role"><option>waiter</option><option>cashier</option><option>admin</option></select></div></div>
+        <button class="btn" style="margin-top:16px" onclick="addStaff()">Add staff</button></div>
+        <div class="panel"><table class="data"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody>
+        ${db.users.map(u => `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td><span class="badge">${u.role}</span></td></tr>`).join('')}</tbody></table></div>`;
+    }
+  },
+
+  cashier: {
+    new() { return takerView(['Dine-in', 'Takeaway', 'Delivery']); },
+    orders() {
+      return `<h2 class="ptitle">Orders & Delivery Status</h2>${db.orders.map(o => orderCard(o, nextBtn(o) + cancelBtn(o))).join('') || '<p class="muted">No orders yet.</p>'}`;
+    },
+    billing() {
+      const open = db.orders.filter(o => o.status !== 'Cancelled' && !o.paid), paid = db.orders.filter(o => o.paid);
+      return `<h2 class="ptitle">Billing Counter</h2>${open.map(o => orderCard(o, billActions(o))).join('') || '<p class="muted">Nothing waiting for a bill.</p>'}
+        <div class="between" style="margin:28px 0 14px"><h3>Paid orders</h3><b class="gold">Collected: ${money(paid.reduce((a, o) => a + total(o), 0))}</b></div>
+        ${paid.map(o => orderCard(o, `<button class="btn sm ghost" onclick="showBill('${o.id}')">View bill</button>`)).join('')}`;
+    }
+  },
+
+  waiter: {
+    tables() {
+      const t = todayStr();
+      const cells = Array.from({ length: TABLES }, (_, i) => {
+        const n = i + 1;
+        const busy = db.orders.some(o => o.type === 'Dine-in' && String(o.info) === String(n) && !o.paid && o.status !== 'Cancelled') ||
+          db.bookings.some(b => b.table === n && b.date === t && b.status === 'Seated');
+        const res = db.bookings.filter(b => b.table === n && b.date === t && ['Pending', 'Confirmed'].includes(b.status));
+        const cls = busy ? 'busy' : res.length ? 'reserved' : 'free';
+        return `<div class="tbl ${cls}"><h3>Table ${n}</h3><div class="small muted">${busy ? 'Occupied' : res.length ? 'Reserved ' + res.map(b => b.time).join(', ') : 'Free'}</div></div>`;
+      }).join('');
+      return `<h2 class="ptitle">Floor Overview <span class="muted small">(today)</span></h2><div class="tgrid">${cells}</div>`;
+    },
+    orders() {
+      const list = db.orders.filter(o => o.type === 'Dine-in' && !isClosed(o));
+      return `<h2 class="ptitle">Dine-in Orders</h2>${list.map(o => orderCard(o, nextBtn(o))).join('') || '<p class="muted">No active dine-in orders.</p>'}`;
+    },
+    new() { return takerView(['Dine-in']); },
+    bookings() {
+      return `<h2 class="ptitle">Table Bookings</h2>${db.bookings.map(b => bookingCard(b, bookingActions(b))).join('') || '<p class="muted">No bookings.</p>'}`;
+    }
+  }
+};
+
+/* keep other open tabs in sync (skip while someone is typing) */
+window.addEventListener('storage', e => {
+  if (e.key !== KEY || !e.newValue) return;
+  db = JSON.parse(e.newValue);
+  const a = document.activeElement;
+  if (!a || !['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName)) render();
+});
+
+render();
+</script>
+</body>
+</html>

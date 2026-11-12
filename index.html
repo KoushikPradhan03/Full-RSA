@@ -110,13 +110,17 @@ table.data th{color:var(--gold);font-size:.72rem;letter-spacing:.1em;text-transf
 .demo{margin-top:16px;padding:12px;border:1px dashed #5a3a1a;border-radius:8px;font-size:.75rem;color:var(--muted);line-height:1.7}
 .foot{margin-top:16px;font-family:'Playfair Display',serif;font-style:italic;color:#a8782e;font-size:.9rem}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="app"></div>
 
 <script>
-/* ================= data ================= */
-const KEY = 'hb_demo_db';
+/* ============ 1. PASTE YOUR SUPABASE DETAILS HERE ============ */
+const SUPABASE_URL = 'https://nlxehkyxajdoriudcqvo.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_MX1LjXK9i4rMjVsVAcEnsw_vQbktKbI';
+/* ================================================================ */
+
 const CATS = ['Starters', 'Mains', 'Desserts', 'Drinks'];
 const ICON = { Starters: '◈', Mains: '◉', Desserts: '◇', Drinks: '◎' };
 const EMOJI = { Starters: '🍢', Mains: '🍛', Desserts: '🍮', Drinks: '🥤' };
@@ -134,16 +138,55 @@ const TABS = {
   waiter: [['tables', 'Tables'], ['orders', 'Dine-in Orders'], ['new', 'New Order'], ['bookings', 'Bookings']]
 };
 
-function seed() {
-  const m = (id, name, category, price, desc, max, available = true) => ({ id, name, category, price, desc, image: '', max, available });
-  return {
-    users: [
-      { id: 'u1', name: 'Restaurant Admin', email: 'admin@heavenbites.com', password: 'Admin@123', role: 'admin' },
-      { id: 'u2', name: 'Ravi Waiter', email: 'waiter@heavenbites.com', password: 'Waiter@123', role: 'waiter' },
-      { id: 'u3', name: 'Priya Cashier', email: 'cashier@heavenbites.com', password: 'Cashier@123', role: 'cashier' },
-      { id: 'u4', name: 'Demo Customer', email: 'customer@heavenbites.com', password: 'Customer@123', role: 'customer' }
-    ],
-    menu: [
+/* ================= database layer (Supabase) ================= */
+const $ = s => document.querySelector(s);
+let sb = null;
+let db = { users: [], menu: [], orders: [], bookings: [] };
+
+async function sha(s) {
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+}
+function sortAll() {
+  db.menu.sort((a, b) => a.pos - b.pos);
+  db.orders.sort((a, b) => b.ts - a.ts);
+  db.bookings.sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+}
+async function loadAll() {
+  for (const t of Object.keys(db)) {
+    const { data, error } = await sb.from(t).select('data');
+    if (error) throw new Error(error.message);
+    db[t] = data.map(r => r.data);
+  }
+  sortAll();
+}
+function put(t, obj) {
+  const i = db[t].findIndex(x => x.id === obj.id);
+  if (i < 0) db[t].push(obj); else db[t][i] = obj;
+  sortAll();
+  sb.from(t).upsert({ id: obj.id, data: obj }).then(r => { if (r.error) toast('Save failed: ' + r.error.message, true); });
+}
+function del(t, id) {
+  db[t] = db[t].filter(x => x.id !== id);
+  sb.from(t).delete().eq('id', id).then(r => { if (r.error) toast('Delete failed: ' + r.error.message, true); });
+}
+async function seedIfEmpty() {
+  if (db.users.length === 0) {
+    const mk = async (id, name, email, pw, role) => ({ id, name, email, pw: await sha(pw), role });
+    const users = [
+      await mk('u1', 'Restaurant Admin', 'admin@heavenbites.com', 'Admin@123', 'admin'),
+      await mk('u2', 'Ravi Waiter', 'waiter@heavenbites.com', 'Waiter@123', 'waiter'),
+      await mk('u3', 'Priya Cashier', 'cashier@heavenbites.com', 'Cashier@123', 'cashier'),
+      await mk('u4', 'Demo Customer', 'customer@heavenbites.com', 'Customer@123', 'customer')
+    ];
+    const r = await sb.from('users').upsert(users.map(u => ({ id: u.id, data: u })));
+    if (r.error) throw new Error(r.error.message);
+    db.users = users;
+  }
+  if (db.menu.length === 0) {
+    let n = 0;
+    const m = (id, name, category, price, desc, max, available = true) => ({ id, name, category, price, desc, image: '', max, available, pos: n++ });
+    const menu = [
       m('m1', 'Paneer Tikka', 'Starters', 260, 'Tandoor-grilled cottage cheese, mint chutney, onion rings', 5),
       m('m2', 'Hara Bhara Kabab', 'Starters', 200, 'Spinach, peas & potato patties, tamarind dip', 5, false),
       m('m3', 'Samosa Chaat', 'Starters', 160, 'Crispy samosas, yogurt, sev, chutneys, pomegranate', 6),
@@ -160,22 +203,36 @@ function seed() {
       m('m14', 'Mango Lassi', 'Drinks', 100, 'Thick yogurt shake with Alphonso mango', 6),
       m('m15', 'Fresh Lime Soda', 'Drinks', 80, 'Sweet, salted or mixed', 6),
       m('m16', 'Cold Coffee', 'Drinks', 120, 'Chilled coffee blended with ice cream', 5)
-    ],
-    orders: [], bookings: [], nextOrder: 1001, nextBill: 1001, nextBooking: 101, nextUser: 5
-  };
+    ];
+    const r = await sb.from('menu').upsert(menu.map(x => ({ id: x.id, data: x })));
+    if (r.error) throw new Error(r.error.message);
+    db.menu = menu;
+  }
 }
-let db;
-try { db = JSON.parse(localStorage.getItem(KEY)); } catch (e) { db = null; }
-if (!db) { db = seed(); save(); }
-function save() { localStorage.setItem(KEY, JSON.stringify(db)); }
+function canRerender() {
+  const a = document.activeElement;
+  if (a && ['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName)) return false;
+  if ($('#modal')) return false;
+  if (['new', 'book'].includes(V)) return false;
+  return true;
+}
+let refreshing = false;
+async function refresh() {
+  if (refreshing) return;
+  refreshing = true;
+  try { await loadAll(); if (me && canRerender()) render(); } catch (e) { console.log(e); }
+  refreshing = false;
+}
 
 /* ================= helpers ================= */
-const $ = s => document.querySelector(s);
 function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function money(n) { return '₹' + Number(n).toLocaleString('en-IN', { maximumFractionDigits: 2 }); }
 function todayStr() { const d = new Date(); d.setMinutes(d.getMinutes() - d.getTimezoneOffset()); return d.toISOString().slice(0, 10); }
 function toast(m, err) { const t = document.createElement('div'); t.className = 'toast' + (err ? ' err' : ''); t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), 2800); }
-function act(fn) { try { fn(); } catch (e) { toast(e.message || String(e), true); } }
+function act(fn) {
+  const fail = e => toast(e.message || String(e), true);
+  try { const r = fn(); if (r && r.catch) r.catch(fail); } catch (e) { fail(e); }
+}
 function modal(html) { closeModal(); const m = document.createElement('div'); m.className = 'mbg'; m.id = 'modal'; m.innerHTML = '<div class="modal">' + html + '</div>'; document.body.appendChild(m); }
 function closeModal() { const m = $('#modal'); if (m) m.remove(); }
 const sub = o => o.lines.reduce((a, l) => a + l.price * l.qty, 0);
@@ -183,6 +240,7 @@ const tax = o => Math.round(sub(o) * 5) / 100;
 const total = o => Math.round((sub(o) + tax(o)) * 100) / 100;
 const isClosed = o => ['Served', 'Delivered', 'Cancelled'].includes(o.status);
 const findOrder = id => db.orders.find(o => o.id === id);
+const rid = () => String(Date.now()).slice(-5) + Math.floor(Math.random() * 10);
 
 /* ================= session / state ================= */
 let me = null;
@@ -225,26 +283,32 @@ function loginView() {
     </form>
     ${c ? `<p class="link" onclick="toggleMode()">${reg ? 'Already have an account? Sign in' : 'New customer? Create an account'}</p>` : ''}
     <div class="demo"><b class="gold">Demo logins</b><br>Admin: admin@heavenbites.com / Admin@123<br>Waiter: waiter@heavenbites.com / Waiter@123<br>Cashier: cashier@heavenbites.com / Cashier@123<br>Customer: customer@heavenbites.com / Customer@123</div>
-    <p class="link" onclick="resetData()">Reset demo data</p>
+    <p class="link" onclick="clearData()">Clear all orders &amp; bookings</p>
   </div><p class="foot">Crafted with passion. Served with love.</p></div>`;
 }
 function setRole(r) { L.role = r; if (r !== 'customer') L.mode = 'login'; render(); }
 function toggleMode() { L.mode = L.mode === 'login' ? 'register' : 'login'; render(); }
-function resetData() { if (confirm('Delete all orders, bookings and new accounts?')) { db = seed(); save(); cart = {}; toast('Demo data reset'); } }
+function clearData() {
+  if (!confirm('Delete ALL orders and bookings for everyone?')) return;
+  db.orders = []; db.bookings = [];
+  sb.from('orders').delete().neq('id', '').then(() => sb.from('bookings').delete().neq('id', '')).then(() => toast('Cleared'));
+}
 function doLogin(e) {
   e.preventDefault();
-  act(() => {
+  act(async () => {
     const email = $('#l-email').value.trim().toLowerCase(), pw = $('#l-pw').value;
     if (!/[^A-Za-z0-9]/.test(pw)) throw 'Password must include a special character';
+    await loadAll();
+    const h = await sha(pw);
     if (L.mode === 'register') {
       const name = $('#l-name').value.trim();
       if (!name) throw 'Name is required';
       if (pw.length < 6) throw 'Password needs at least 6 characters';
       if (db.users.some(u => u.email === email)) throw 'Email already registered';
-      const u = { id: 'u' + (db.nextUser++), name, email, password: pw, role: 'customer' };
-      db.users.push(u); save(); startSession(u);
+      const u = { id: 'u' + Date.now(), name, email, pw: h, role: 'customer' };
+      put('users', u); startSession(u);
     } else {
-      const u = db.users.find(x => x.email === email && x.password === pw && x.role === L.role);
+      const u = db.users.find(x => x.email === email && x.pw === h && x.role === L.role);
       if (!u) throw 'Invalid email, password or role';
       startSession(u);
     }
@@ -275,7 +339,7 @@ function setStatus(id, status) {
     const o = findOrder(id);
     if (me.role === 'waiter' && !(o.type === 'Dine-in' && ['Preparing', 'Ready', 'Served'].includes(status))) throw 'Waiters can only update dine-in orders';
     if (isClosed(o) && me.role !== 'admin') throw 'This order is already closed';
-    o.status = status; save(); toast('Order #' + id + ' → ' + status); render();
+    o.status = status; put('orders', o); toast('Order #' + id + ' → ' + status); render();
   });
 }
 function bookingCard(b, actions = '') {
@@ -289,7 +353,7 @@ function bookingActions(b) {
   if (!['Completed', 'Cancelled'].includes(b.status)) h += `<button class="btn sm danger" onclick="setBooking('${b.id}','Cancelled')">Cancel</button>`;
   return h;
 }
-function setBooking(id, status) { act(() => { db.bookings.find(b => b.id === id).status = status; save(); toast('Booking updated'); render(); }); }
+function setBooking(id, status) { act(() => { const b = db.bookings.find(x => x.id === id); b.status = status; put('bookings', b); toast('Booking updated'); render(); }); }
 function showBill(id) {
   const o = findOrder(id);
   modal(`<div id="bill" class="bill"><h2 class="center">Heaven Bites</h2><p class="center small muted">Authentic Indian Fine Dining</p><hr>
@@ -318,9 +382,9 @@ function makeOrder(type, info, name, items) {
   }
   if (!lines.length) throw 'Your cart is empty';
   const cust = me.role === 'customer';
-  const o = { id: String(db.nextOrder++), customerId: cust ? me.id : 'walk-in', customerName: cust ? me.name : ((name || '').trim() || 'Walk-in'),
+  const o = { id: rid(), ts: Date.now(), customerId: cust ? me.id : 'walk-in', customerName: cust ? me.name : ((name || '').trim() || 'Walk-in'),
     type, info: type === 'Takeaway' ? '' : info, status: 'Placed', createdAt: new Date().toLocaleString('en-IN'), paid: false, billNo: '', payMethod: '', lines };
-  db.orders.unshift(o); save(); return o;
+  put('orders', o); return o;
 }
 function infoField(type, id, val) {
   if (type === 'Dine-in') return `<label>Table number</label><select id="${id}" onchange="cartInfo=this.value">${Array.from({ length: TABLES }, (_, i) => `<option ${String(i + 1) === val ? 'selected' : ''}>${i + 1}</option>`).join('')}</select>`;
@@ -351,7 +415,7 @@ function takerSubmit() {
     const items = {}; document.querySelectorAll('.ot-qty').forEach(q => { if (+q.value > 0) items[q.dataset.id] = +q.value; });
     const info = ($('#ot-info') || {}).value || '';
     makeOrder($('#ot-type').value, info, $('#ot-name').value, items);
-    toast('Order placed'); V = me.role === 'waiter' ? 'orders' : 'orders'; render();
+    toast('Order placed'); V = 'orders'; render();
   });
 }
 
@@ -385,27 +449,28 @@ function setCat(c) { cat = c; render(); }
 function setCartType(t) { cartType = t; cartInfo = t === 'Dine-in' ? '1' : ''; render(); }
 function placeCart() { act(() => { makeOrder(cartType, cartInfo, '', cart); cart = {}; toast('Order placed! 🎉'); V = 'orders'; render(); }); }
 function cancelOwnOrder(id) {
-  act(() => { const o = findOrder(id); if (o.status !== 'Placed') throw 'Order is already being prepared'; o.status = 'Cancelled'; save(); toast('Order cancelled'); render(); });
+  act(() => { const o = findOrder(id); if (o.status !== 'Placed') throw 'Order is already being prepared'; o.status = 'Cancelled'; put('orders', o); toast('Order cancelled'); render(); });
 }
 function cancelOwnBooking(id) {
-  act(() => { const b = db.bookings.find(x => x.id === id); if (!['Pending', 'Confirmed'].includes(b.status)) throw 'This booking can no longer be cancelled'; b.status = 'Cancelled'; save(); toast('Booking cancelled'); render(); });
+  act(() => { const b = db.bookings.find(x => x.id === id); if (!['Pending', 'Confirmed'].includes(b.status)) throw 'This booking can no longer be cancelled'; b.status = 'Cancelled'; put('bookings', b); toast('Booking cancelled'); render(); });
 }
 function doBook() {
-  act(() => {
+  act(async () => {
     const date = $('#b-date').value, time = $('#b-time').value, guests = +$('#b-guests').value, phone = $('#b-phone').value.trim();
     if (!/^[0-9+ -]{8,15}$/.test(phone)) throw 'Enter a valid phone number';
     if (!date || date < todayStr()) throw 'Choose a valid date';
+    await loadAll();   // get the latest bookings before choosing a table
     let t = 0;
     for (let n = 1; n <= TABLES; n++) if (!db.bookings.some(b => b.status !== 'Cancelled' && b.date === date && b.time === time && b.table === n)) { t = n; break; }
     if (!t) throw 'No tables free at that time. Try another slot.';
-    db.bookings.push({ id: 'B' + (db.nextBooking++), customerId: me.id, customerName: me.name, phone, date, time, guests, table: t, status: 'Pending' });
-    save(); toast('Table ' + t + ' reserved (pending confirmation)'); render();
+    put('bookings', { id: 'B' + rid(), customerId: me.id, customerName: me.name, phone, date, time, guests, table: t, status: 'Pending' });
+    toast('Table ' + t + ' reserved (pending confirmation)'); render();
   });
 }
 
 /* ================= admin helpers ================= */
-function toggleAvail(id, v) { db.menu.find(m => m.id === id).available = v; save(); toast(v ? 'Now available' : 'Marked unavailable'); render(); }
-function delItem(id) { if (confirm('Delete this menu item?')) { db.menu = db.menu.filter(m => m.id !== id); save(); render(); } }
+function toggleAvail(id, v) { const m = db.menu.find(x => x.id === id); m.available = v; put('menu', m); toast(v ? 'Now available' : 'Marked unavailable'); render(); }
+function delItem(id) { if (confirm('Delete this menu item?')) { del('menu', id); render(); } }
 function itemForm(id) {
   const i = id ? db.menu.find(x => x.id === id) : { name: '', category: 'Starters', price: '', desc: '', image: '', max: 5 };
   modal(`<h3>${id ? 'Edit' : 'Add'} menu item</h3>
@@ -424,26 +489,26 @@ function saveItem(id) {
     if (isNaN(price) || price < 0) throw 'Enter a valid price';
     if (isNaN(max) || max < 1 || max > 20) throw 'Max per order must be 1 to 20';
     const data = { name, category: $('#f-cat').value, price, desc: $('#f-desc').value.trim(), image: $('#f-img').value.trim(), max };
-    if (id) Object.assign(db.menu.find(m => m.id === id), data);
-    else db.menu.push({ id: 'm' + Date.now().toString(36), available: true, ...data });
-    save(); closeModal(); toast('Saved'); render();
+    if (id) put('menu', Object.assign(db.menu.find(m => m.id === id), data));
+    else put('menu', { id: 'm' + Date.now().toString(36), available: true, pos: Date.now(), ...data });
+    closeModal(); toast('Saved'); render();
   });
 }
 function addStaff() {
-  act(() => {
+  act(async () => {
     const name = $('#s-name').value.trim(), email = $('#s-email').value.trim().toLowerCase(), pw = $('#s-pw').value, role = $('#s-role').value;
     if (!name) throw 'Name is required';
     if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) throw 'Enter a valid email';
     if (pw.length < 6 || !/[^A-Za-z0-9]/.test(pw)) throw 'Password needs 6+ characters and a special character';
     if (db.users.some(u => u.email === email)) throw 'Email already registered';
-    db.users.push({ id: 'u' + (db.nextUser++), name, email, password: pw, role }); save(); toast('Staff added'); render();
+    put('users', { id: 'u' + Date.now(), name, email, pw: await sha(pw), role }); toast('Staff added'); render();
   });
 }
 
 /* ================= cashier billing ================= */
-function genBill(id) { act(() => { const o = findOrder(id); if (o.status === 'Cancelled') throw 'Cancelled orders cannot be billed'; if (!o.billNo) { o.billNo = 'HB-' + (db.nextBill++); save(); } render(); showBill(id); }); }
+function genBill(id) { act(() => { const o = findOrder(id); if (o.status === 'Cancelled') throw 'Cancelled orders cannot be billed'; if (!o.billNo) { o.billNo = 'HB-' + o.id; put('orders', o); } render(); showBill(id); }); }
 function payBill(id) {
-  act(() => { const o = findOrder(id); if (!o.billNo) throw 'Generate the bill first'; o.paid = true; o.payMethod = $('#pm-' + id).value; save(); toast('Payment recorded'); render(); });
+  act(() => { const o = findOrder(id); if (!o.billNo) throw 'Generate the bill first'; o.paid = true; o.payMethod = $('#pm-' + id).value; put('orders', o); toast('Payment recorded'); render(); });
 }
 function billActions(o) {
   if (!o.billNo) return `<button class="btn sm" onclick="genBill('${o.id}')">Generate bill</button>`;
@@ -475,7 +540,7 @@ const VIEWS = {
         <button class="btn wide" style="margin-top:18px" onclick="placeCart()">Place order</button></div>`;
     },
     book() {
-      const mine = db.bookings.filter(b => b.customerId === me.id).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+      const mine = db.bookings.filter(b => b.customerId === me.id);
       const slots = Array.from({ length: 11 }, (_, i) => String(12 + i).padStart(2, '0') + ':00');
       return `<h2 class="ptitle">Book a Table</h2><div class="panel"><div class="row">
         <div><label>Date</label><input type="date" id="b-date" min="${todayStr()}" value="${todayStr()}"></div>
@@ -568,15 +633,27 @@ const VIEWS = {
   }
 };
 
-/* keep other open tabs in sync (skip while someone is typing) */
-window.addEventListener('storage', e => {
-  if (e.key !== KEY || !e.newValue) return;
-  db = JSON.parse(e.newValue);
-  const a = document.activeElement;
-  if (!a || !['INPUT', 'SELECT', 'TEXTAREA'].includes(a.tagName)) render();
-});
-
-render();
+/* ================= start ================= */
+(async () => {
+  const app = $('#app');
+  if (SUPABASE_URL.startsWith('PASTE') || SUPABASE_KEY.startsWith('PASTE')) {
+    app.innerHTML = '<p class="center" style="padding:60px">Open index.html and paste your Supabase URL and anon key at the top of the script.</p>'; return;
+  }
+  app.innerHTML = '<p class="center muted" style="padding:60px">Loading…</p>';
+  try {
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    await loadAll();
+    await seedIfEmpty();
+  } catch (e) {
+    app.innerHTML = '<p class="center" style="padding:60px;color:#ffb3a8">Could not connect to Supabase: ' + esc(e.message) + '<br><br>Check the URL, the key and that the SQL tables were created.</p>'; return;
+  }
+  render();
+  let tmr = null;
+  sb.channel('hb-live').on('postgres_changes', { event: '*', schema: 'public' }, () => {
+    clearTimeout(tmr); tmr = setTimeout(refresh, 300);
+  }).subscribe();
+  setInterval(refresh, 8000);   // backup in case live updates are blocked
+})();
 </script>
 </body>
 </html>

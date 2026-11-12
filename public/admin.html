@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites – Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="topbar"></div>
+<div class="container">
+
+  <section id="view-dash" class="view">
+    <h2 class="page-title">Dashboard</h2>
+    <div class="stat-grid" id="stats"></div>
+    <h3 class="page-title">Recent orders</h3>
+    <div id="recent"></div>
+  </section>
+
+  <section id="view-menu" class="view hidden">
+    <div class="between" style="margin-bottom:14px">
+      <h3><span class="gold">◈</span> MANAGE MENU ITEMS <span class="muted small" id="item-count"></span></h3>
+      <button class="btn" onclick="itemForm()">+ Add Item</button>
+    </div>
+    <div class="controls">
+      <input id="f-q" placeholder="🔍 Search menu items..." oninput="f.q=this.value;renderMenu()">
+      <div class="pills" id="f-pills" style="margin:0"></div>
+      <select onchange="f.status=this.value;renderMenu()"><option>All Status</option><option>Available</option><option>Unavailable</option></select>
+      <select onchange="f.sort=this.value;renderMenu()"><option value="name">Sort by Name</option><option value="low">Price: Low → High</option><option value="high">Price: High → Low</option></select>
+    </div>
+    <div class="grid" id="menu-grid"></div>
+  </section>
+
+  <section id="view-orders" class="view hidden">
+    <div class="between"><h2 class="page-title">All Orders</h2>
+      <select id="o-filter" class="sm" onchange="drawOrders()"><option>All</option><option>Active</option><option>Closed</option></select></div>
+    <div id="orders-list"></div>
+  </section>
+
+  <section id="view-bookings" class="view hidden">
+    <h2 class="page-title">Table Bookings</h2>
+    <div id="bookings-list"></div>
+  </section>
+
+  <section id="view-staff" class="view hidden">
+    <h2 class="page-title">Staff & Users</h2>
+    <div class="panel">
+      <h3>Add staff member</h3>
+      <form id="staff-form"><div class="form-row">
+        <div><label>Name</label><input name="name" required></div>
+        <div><label>Email</label><input name="email" type="email" required></div>
+        <div><label>Password</label><input name="password" type="text" placeholder="e.g. Pass@123" required></div>
+        <div><label>Role</label><select name="role"><option>waiter</option><option>cashier</option><option>admin</option></select></div>
+      </div><button class="btn" style="margin-top:16px">Add staff</button></form>
+    </div>
+    <div class="panel"><table class="data"><thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead><tbody id="users-body"></tbody></table></div>
+  </section>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+const user = requireRole('admin');
+renderTopbar(user, [['dash', 'Dashboard'], ['menu', 'Menu Management'], ['orders', 'Orders'], ['bookings', 'Bookings'], ['staff', 'Staff']]);
+
+let items = [], orders = [], current = 'dash';
+const f = { cat: 'All', status: 'All Status', q: '', sort: 'name' };
+const ORDER_STATUSES = ['Placed', 'Preparing', 'Ready', 'Out for Delivery', 'Served', 'Delivered', 'Cancelled'];
+
+setupTabs(v => { current = v; refresh(); });
+
+async function refresh() {
+  try {
+    if (current === 'dash') await loadDash();
+    if (current === 'menu') { items = (await api('/menu')).items; renderMenu(); }
+    if (current === 'orders') { orders = (await api('/orders')).items; drawOrders(); }
+    if (current === 'bookings') loadBookings();
+    if (current === 'staff') loadStaff();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ---- dashboard ---- */
+async function loadDash() {
+  const s = await api('/stats');
+  document.getElementById('stats').innerHTML = [
+    ['Total orders', s.totalOrders], ['Active orders', s.activeOrders], ['Revenue (paid)', money(s.revenue)],
+    ['Pending bookings', s.pendingBookings], ['Menu items', s.menuItems], ['Users', s.users]
+  ].map(x => `<div class="stat"><span class="muted small">${x[0]}</span><b>${x[1]}</b></div>`).join('');
+  orders = (await api('/orders')).items;
+  document.getElementById('recent').innerHTML = orders.slice(0, 4).map(o => orderCard(o)).join('') || '<p class="muted">No orders yet.</p>';
+}
+
+/* ---- menu management ---- */
+function renderMenu() {
+  document.getElementById('f-pills').innerHTML = ['All', 'Starters', 'Mains', 'Desserts', 'Drinks'].map(c =>
+    `<button class="pill ${f.cat === c ? 'active' : ''}" onclick="f.cat='${c}';renderMenu()">${c === 'All' ? 'All Categories' : c}</button>`).join('');
+  let list = items.filter(i =>
+    (f.cat === 'All' || i.category === f.cat) &&
+    (f.status === 'All Status' || (f.status === 'Available') === i.available) &&
+    (i.name.toLowerCase().includes(f.q.toLowerCase())));
+  if (f.sort === 'name') list.sort((a, b) => a.name.localeCompare(b.name));
+  if (f.sort === 'low') list.sort((a, b) => a.price - b.price);
+  if (f.sort === 'high') list.sort((a, b) => b.price - a.price);
+  document.getElementById('item-count').textContent = list.length + ' items';
+  document.getElementById('menu-grid').innerHTML = list.map(i => `
+    <div class="card admin-card ${i.available ? '' : 'off'}">
+      <div class="thumb" data-emoji="${CAT_EMOJI[i.category] || '🍽'}">
+        ${i.image ? `<img src="${esc(i.image)}" alt="" onerror="this.remove()">` : ''}
+        <span class="tag">${i.category}</span>
+        ${i.available ? '' : '<span class="ribbon">UNAVAILABLE</span>'}
+      </div>
+      <div class="card-body">
+        <h3>${esc(i.name)}</h3><p class="muted small desc">${esc(i.description)}</p>
+        <div class="between"><span class="price">${money(i.price)}</span>
+          <span class="badge ${i.available ? 'st-Paid' : 'st-Cancelled'}">${i.available ? '● Available' : '● Unavailable'}</span></div>
+        <div class="between" style="margin-top:12px">
+          <label class="switch" style="margin:0"><input type="checkbox" ${i.available ? 'checked' : ''} onchange="toggleAvail('${i.id}',this.checked)"><span></span></label>
+          <div class="actions"><button class="btn btn-sm btn-ghost" onclick="itemForm('${i.id}')">Edit</button>
+          <button class="btn btn-sm btn-danger" onclick="delItem('${i.id}')">Delete</button></div>
+        </div>
+      </div></div>`).join('') || '<p class="muted">No items match.</p>';
+}
+async function toggleAvail(id, v) {
+  try { await api('/menu/update', { id, available: v }); toast(v ? 'Now available' : 'Marked unavailable'); refresh(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+async function delItem(id) {
+  if (!confirm('Delete this menu item?')) return;
+  try { await api('/menu/delete', { id }); toast('Deleted'); refresh(); } catch (e) { toast(e.message, 'err'); }
+}
+function itemForm(id) {
+  const i = id ? items.find(x => x.id === id) : { name: '', category: 'Starters', price: '', description: '', image: '', maxPerOrder: 5 };
+  openModal(`<h3>${id ? 'Edit' : 'Add'} menu item</h3>
+  <form id="item-form">
+    <label>Name</label><input name="name" value="${esc(i.name)}" required>
+    <label>Category</label><select name="category">${['Starters', 'Mains', 'Desserts', 'Drinks'].map(c => `<option ${c === i.category ? 'selected' : ''}>${c}</option>`).join('')}</select>
+    <label>Price (₹)</label><input name="price" type="number" min="0" step="1" value="${i.price}" required>
+    <label>Description</label><textarea name="description" rows="2">${esc(i.description)}</textarea>
+    <label>Image URL (optional)</label><input name="image" value="${esc(i.image)}" placeholder="https://... or images/butter-chicken.jpg">
+    <label>Max per order</label><input name="maxPerOrder" type="number" min="1" max="20" value="${i.maxPerOrder}">
+    <div class="modal-actions"><button type="button" class="btn btn-ghost" onclick="closeModal()">Cancel</button><button class="btn">Save</button></div>
+  </form>`);
+  document.getElementById('item-form').onsubmit = async e => {
+    e.preventDefault();
+    const data = Object.fromEntries(new FormData(e.target));
+    try {
+      if (id) { data.id = id; await api('/menu/update', data); } else await api('/menu/add', data);
+      closeModal(); toast('Saved'); refresh();
+    } catch (er) { toast(er.message, 'err'); }
+  };
+}
+
+/* ---- orders ---- */
+function drawOrders() {
+  const flt = document.getElementById('o-filter').value;
+  const list = orders.filter(o => flt === 'All' || (flt === 'Active') === !['Served', 'Delivered', 'Cancelled'].includes(o.status));
+  document.getElementById('orders-list').innerHTML = list.map(o => orderCard(o,
+    (o.billNo ? `<button class="btn btn-sm btn-ghost" onclick="viewBill('${o.id}')">View bill</button>` : '') +
+    `<select class="sm" onchange="ordStatus('${o.id}',this.value)">${ORDER_STATUSES.map(s => `<option ${s === o.status ? 'selected' : ''}>${s}</option>`).join('')}</select>`
+  )).join('') || '<p class="muted">No orders.</p>';
+}
+function viewBill(id) { showBill(orders.find(o => o.id === id)); }
+
+/* ---- bookings ---- */
+async function loadBookings() {
+  const list = (await api('/bookings/all')).items;
+  document.getElementById('bookings-list').innerHTML = list.map(b => bookingCard(b, bookingActions(b))).join('') || '<p class="muted">No bookings.</p>';
+}
+
+/* ---- staff ---- */
+async function loadStaff() {
+  const list = (await api('/users')).items;
+  document.getElementById('users-body').innerHTML = list.map(u =>
+    `<tr><td>${esc(u.name)}</td><td>${esc(u.email)}</td><td><span class="badge">${u.role}</span></td></tr>`).join('');
+}
+document.getElementById('staff-form').onsubmit = async e => {
+  e.preventDefault();
+  try { await api('/staff/add', Object.fromEntries(new FormData(e.target))); toast('Staff added'); e.target.reset(); loadStaff(); }
+  catch (er) { toast(er.message, 'err'); }
+};
+</script>
+</body>
+</html>

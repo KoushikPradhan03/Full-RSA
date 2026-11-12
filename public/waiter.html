@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites – Waiter</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="topbar"></div>
+<div class="container">
+  <section id="view-tables" class="view">
+    <h2 class="page-title">Floor Overview <span class="muted small">(today)</span></h2>
+    <div class="tables-grid" id="tables-grid"></div>
+  </section>
+  <section id="view-orders" class="view hidden">
+    <h2 class="page-title">Dine-in Orders</h2>
+    <div id="orders-list"></div>
+  </section>
+  <section id="view-neworder" class="view hidden">
+    <h2 class="page-title">Take a Table Order</h2>
+    <div id="taker"></div>
+  </section>
+  <section id="view-bookings" class="view hidden">
+    <h2 class="page-title">Table Bookings</h2>
+    <div id="bookings-list"></div>
+  </section>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+const user = requireRole('waiter');
+renderTopbar(user, [['tables', 'Tables'], ['orders', 'Dine-in Orders'], ['neworder', 'New Order'], ['bookings', 'Bookings']]);
+
+let current = 'tables', orders = [], bookings = [];
+setupTabs(v => { current = v; refresh(); });
+setInterval(() => { if (current !== 'neworder') refresh(); }, 10000);
+
+async function refresh() {
+  try {
+    if (current === 'tables') {
+      orders = (await api('/orders')).items; bookings = (await api('/bookings/all')).items; drawTables();
+    } else if (current === 'orders') {
+      orders = (await api('/orders')).items; drawOrders();
+    } else if (current === 'bookings') {
+      bookings = (await api('/bookings/all')).items; drawBookings();
+    } else if (current === 'neworder') {
+      renderOrderTaker('taker', { types: ['Dine-in'], onDone: () => showView('orders') });
+    }
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function drawTables() {
+  const t = today(); let h = '';
+  for (let n = 1; n <= 10; n++) {
+    const busy = orders.some(o => o.type === 'Dine-in' && String(o.info) === String(n) && !o.paid && o.status !== 'Cancelled')
+              || bookings.some(b => b.tableNo === n && b.date === t && b.status === 'Seated');
+    const res = bookings.filter(b => b.tableNo === n && b.date === t && ['Pending', 'Confirmed'].includes(b.status));
+    const cls = busy ? 'busy' : res.length ? 'reserved' : 'free';
+    h += `<div class="tbl ${cls}"><h3>Table ${n}</h3>
+      <div class="small muted">${busy ? 'Occupied' : res.length ? 'Reserved ' + res.map(b => b.time).join(', ') : 'Free'}</div></div>`;
+  }
+  document.getElementById('tables-grid').innerHTML = h;
+}
+function drawOrders() {
+  const list = orders.filter(o => o.type === 'Dine-in' && !['Served', 'Delivered', 'Cancelled'].includes(o.status));
+  document.getElementById('orders-list').innerHTML = list.map(o => orderCard(o, orderActions(o))).join('')
+    || '<p class="muted">No active dine-in orders.</p>';
+}
+function drawBookings() {
+  document.getElementById('bookings-list').innerHTML = bookings.map(b => bookingCard(b, bookingActions(b))).join('')
+    || '<p class="muted">No bookings.</p>';
+}
+</script>
+</body>
+</html>

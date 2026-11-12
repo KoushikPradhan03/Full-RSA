@@ -1,0 +1,1 @@
+1001|1a681138|Demo Customer|Dine-in|4|Served|08 Nov 2026, 09:51 PM|false|HB-1001||m1^Paneer Tikka^240.0^1~m8^Hyderabadi Biryani^300.0^1~m10^Gulab Jamun^120.0^1~m14^Mango Lassi^100.0^1

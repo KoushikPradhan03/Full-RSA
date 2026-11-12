@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites – Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;0,700;1,500&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="login-page">
+  <div class="login-card">
+    <div class="login-brand"><span class="gold">◆</span> Heaven Bites <span class="gold">◆</span></div>
+    <p class="spaced gold small center" style="margin-top:6px">AUTHENTIC INDIAN FINE DINING</p>
+    <hr class="gold-line">
+    <p class="spaced muted small center">RESTAURANT AUTOMATION SYSTEM</p>
+
+    <form id="form">
+      <label>Login as</label>
+      <div class="roles" id="roles">
+        <button type="button" class="role active" data-role="admin">Admin</button>
+        <button type="button" class="role" data-role="waiter">Waiter</button>
+        <button type="button" class="role" data-role="cashier">Cashier</button>
+        <button type="button" class="role" data-role="customer">Customer</button>
+      </div>
+
+      <div id="name-wrap" class="hidden"><label>Full name</label><input id="name" placeholder="Your name"></div>
+
+      <label>Email address</label>
+      <div class="input-icon"><input id="email" type="email" placeholder="your@email.com" required><span>✉</span></div>
+
+      <label>Password</label>
+      <div class="input-icon"><input id="password" type="password" placeholder="Must contain a special character" required><span id="eye">👁</span></div>
+      <p class="hint">Password must include at least one special character (e.g. @, #, !)</p>
+
+      <button class="btn-gold" id="submit">SIGN IN TO SYSTEM</button>
+    </form>
+
+    <p class="center link hidden" id="toggle-mode"></p>
+
+    <div class="demo">
+      <b class="gold">Demo logins</b><br>
+      Admin: admin@heavenbites.com / Admin@123<br>
+      Waiter: waiter@heavenbites.com / Waiter@123<br>
+      Cashier: cashier@heavenbites.com / Cashier@123<br>
+      Customer: customer@heavenbites.com / Customer@123
+    </div>
+  </div>
+  <p class="foot">Crafted with passion. Served with love.</p>
+
+<script src="js/common.js"></script>
+<script>
+  let role = 'admin', mode = 'login';
+  const $ = id => document.getElementById(id);
+
+  const a = getAuth();
+  if (a) location.href = '/' + a.user.role + '.html';
+
+  function render() {
+    document.querySelectorAll('.role').forEach(b => b.classList.toggle('active', b.dataset.role === role));
+    const isCustomer = role === 'customer';
+    if (!isCustomer) mode = 'login';
+    $('toggle-mode').classList.toggle('hidden', !isCustomer);
+    $('toggle-mode').textContent = mode === 'login' ? 'New customer? Create an account' : 'Already have an account? Sign in';
+    $('name-wrap').classList.toggle('hidden', mode !== 'register');
+    $('submit').textContent = mode === 'login' ? 'SIGN IN TO SYSTEM' : 'CREATE ACCOUNT';
+  }
+  document.querySelectorAll('.role').forEach(b => b.onclick = () => { role = b.dataset.role; render(); });
+  $('toggle-mode').onclick = () => { mode = mode === 'login' ? 'register' : 'login'; render(); };
+  $('eye').onclick = () => { $('password').type = $('password').type === 'password' ? 'text' : 'password'; };
+
+  $('form').onsubmit = async e => {
+    e.preventDefault();
+    const email = $('email').value.trim(), password = $('password').value;
+    if (!/[^A-Za-z0-9]/.test(password)) { toast('Password must include a special character', 'err'); return; }
+    try {
+      const data = mode === 'register'
+        ? await api('/register', { name: $('name').value, email, password })
+        : await api('/login', { email, password, role });
+      setAuth(data);
+      location.href = '/' + data.user.role + '.html';
+    } catch (err) { toast(err.message, 'err'); }
+  };
+  render();
+</script>
+</body>
+</html>

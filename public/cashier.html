@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites – Cashier</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="topbar"></div>
+<div class="container">
+  <section id="view-neworder" class="view">
+    <h2 class="page-title">Take New Order</h2>
+    <div id="taker"></div>
+  </section>
+  <section id="view-orders" class="view hidden">
+    <div class="between"><h2 class="page-title">Orders & Delivery Status</h2>
+      <select id="o-filter" class="sm" onchange="drawOrders()"><option>Active</option><option>Closed</option><option>All</option></select></div>
+    <div id="orders-list"></div>
+  </section>
+  <section id="view-billing" class="view hidden">
+    <h2 class="page-title">Billing Counter</h2>
+    <div id="bill-open"></div>
+    <div id="bill-paid" style="margin-top:28px"></div>
+  </section>
+</div>
+
+<script src="js/common.js"></script>
+<script>
+const user = requireRole('cashier');
+renderTopbar(user, [['neworder', 'New Order'], ['orders', 'Orders & Delivery'], ['billing', 'Billing']]);
+
+let current = 'neworder', orders = [];
+setupTabs(v => { current = v; refresh(); });
+setInterval(() => { if (current === 'orders') refresh(); }, 10000);
+
+async function refresh() {
+  try {
+    if (current === 'neworder') renderOrderTaker('taker', { onDone: () => showView('orders') });
+    if (current === 'orders') { orders = (await api('/orders')).items; drawOrders(); }
+    if (current === 'billing') { orders = (await api('/orders')).items; drawBilling(); }
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+function drawOrders() {
+  const flt = document.getElementById('o-filter').value;
+  const closed = o => ['Served', 'Delivered', 'Cancelled'].includes(o.status);
+  const list = orders.filter(o => flt === 'All' || (flt === 'Active') === !closed(o));
+  document.getElementById('orders-list').innerHTML = list.map(o => orderCard(o, orderActions(o, { cancel: true }))).join('')
+    || '<p class="muted">Nothing here.</p>';
+}
+
+function billActions(o) {
+  if (!o.billNo) return `<button class="btn btn-sm" onclick="genBill('${o.id}')">Generate bill</button>`;
+  return `<button class="btn btn-sm btn-ghost" onclick="viewBill('${o.id}')">View bill</button>
+    <select id="pm-${o.id}" class="sm"><option>Cash</option><option>Card</option><option>UPI</option></select>
+    <button class="btn btn-sm" onclick="payBill('${o.id}')">Mark paid</button>`;
+}
+function drawBilling() {
+  const open = orders.filter(o => o.status !== 'Cancelled' && !o.paid);
+  const paid = orders.filter(o => o.paid);
+  const total = paid.reduce((a, o) => a + o.total, 0);
+  document.getElementById('bill-open').innerHTML = open.map(o => orderCard(o, billActions(o))).join('')
+    || '<p class="muted">Nothing waiting for a bill.</p>';
+  document.getElementById('bill-paid').innerHTML =
+    `<div class="between"><h3>Paid orders</h3><b class="gold">Collected: ${money(total)}</b></div>` +
+    paid.map(o => orderCard(o, `<button class="btn btn-sm btn-ghost" onclick="viewBill('${o.id}')">View bill</button>`)).join('');
+}
+function viewBill(id) { showBill(orders.find(o => o.id === id)); }
+async function genBill(id) {
+  try { const o = await api('/bills/generate', { id }); toast('Bill ' + o.billNo + ' generated'); showBill(o); orders = (await api('/orders')).items; drawBilling(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+async function payBill(id) {
+  try { await api('/bills/pay', { id, method: document.getElementById('pm-' + id).value }); toast('Payment recorded'); refresh(); }
+  catch (e) { toast(e.message, 'err'); }
+}
+</script>
+</body>
+</html>

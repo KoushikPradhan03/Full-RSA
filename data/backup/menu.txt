@@ -1,0 +1,16 @@
+m1|Paneer Tikka|Starters|240.0|Tandoor-grilled cottage cheese, mint chutney, onion rings||true|5
+m2|Hara Bhara Kabab|Starters|200.0|Spinach, peas & potato patties, tamarind dip||true|5
+m3|Samosa Chaat|Starters|140.0|Crispy samosas, yogurt, sev, chutneys, pomegranate||true|6
+m4|Dahi Puri|Starters|140.0|Hollow puris, spiced potato, sweet curd, chaat masala||true|4
+m5|Butter Chicken|Mains|320.0|Slow-cooked chicken in a velvety tomato-cream sauce with warm spices||true|4
+m6|Dal Makhani|Mains|240.0|Black lentils simmered overnight with butter and cream||true|4
+m7|Paneer Butter Masala|Mains|280.0|Cottage cheese cubes in rich tomato-cashew gravy||true|4
+m8|Hyderabadi Biryani|Mains|300.0|Fragrant basmati layered with spiced masala and saffron||true|4
+m9|Garlic Naan|Mains|90.0|Soft leavened flatbread brushed with garlic butter, baked in our clay tandoor||true|8
+m10|Gulab Jamun|Desserts|120.0|Warm milk dumplings in cardamom sugar syrup||true|6
+m11|Rasmalai|Desserts|150.0|Soft cheese discs in saffron-pistachio milk||true|6
+m12|Kulfi Falooda|Desserts|130.0|Traditional Indian ice cream with vermicelli and rose syrup||true|4
+m13|Masala Chai|Drinks|60.0|Spiced Assam tea with ginger and cardamom||true|8
+m14|Mango Lassi|Drinks|100.0|Thick yogurt shake with Alphonso mango||true|6
+m15|Fresh Lime Soda|Drinks|80.0|Sweet, salted or mixed||true|6
+m16|Cold Coffee|Drinks|120.0|Chilled coffee blended with ice cream||true|5

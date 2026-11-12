@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Heaven Bites</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Outfit:wght@300;400;500;600&family=JetBrains+Mono&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<div id="topbar"></div>
+
+<section id="view-menu" class="view">
+  <div class="hero">
+    <p class="mono gold small spaced">AUTHENTIC INDIAN FINE DINING</p>
+    <h1>Heaven Bites</h1>
+    <p class="muted">Crafted with passion. Served with love.</p>
+  </div>
+  <div class="container">
+    <div class="pills" id="pills"></div>
+    <div id="menu-sections"></div>
+  </div>
+</section>
+
+<section id="view-cart" class="view hidden">
+  <div class="container narrow">
+    <h2 class="page-title">Your Order</h2>
+    <div class="panel">
+      <div id="cart-lines"></div>
+      <div id="cart-form" class="hidden">
+        <div class="form-row" style="margin-top:16px">
+          <div><label>Order type</label>
+            <select id="o-type" onchange="drawInfo()"><option>Dine-in</option><option>Takeaway</option><option>Delivery</option></select></div>
+          <div id="o-info-wrap"></div>
+        </div>
+        <button class="btn wide" style="margin-top:18px" onclick="placeOrder()" id="place-btn">Place order</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="view-book" class="view hidden">
+  <div class="container narrow">
+    <h2 class="page-title">Book a Table</h2>
+    <div class="panel">
+      <form id="book-form">
+        <div class="form-row">
+          <div><label>Date</label><input type="date" id="b-date" required></div>
+          <div><label>Time</label><select id="b-time"></select></div>
+          <div><label>Guests</label><select id="b-guests"></select></div>
+          <div><label>Phone</label><input id="b-phone" placeholder="98765 43210" required></div>
+        </div>
+        <button class="btn" style="margin-top:18px">Reserve table</button>
+      </form>
+    </div>
+    <h3 class="page-title">My bookings</h3>
+    <div id="my-bookings"></div>
+  </div>
+</section>
+
+<section id="view-orders" class="view hidden">
+  <div class="container narrow">
+    <h2 class="page-title">My Orders</h2>
+    <div id="my-orders"></div>
+  </div>
+</section>
+
+<script src="js/common.js"></script>
+<script>
+const user = requireRole('customer');
+renderTopbar(user, [['menu', 'Menu'], ['cart', 'Order <span id="cart-count" class="count hidden">0</span>'], ['book', 'Book Table'], ['orders', 'My Orders']]);
+
+let menu = [], cat = 'Starters', cart = {}, sel = {}, current = 'menu', orders = [];
+const CATS = ['Starters', 'Mains', 'Desserts', 'Drinks'];
+
+setupTabs(v => { current = v; refresh(); });
+setInterval(() => { if (current === 'orders' || current === 'book') refresh(); }, 8000);
+
+async function refresh() {
+  try {
+    if (current === 'menu') { menu = (await api('/menu')).items; renderMenu(); }
+    if (current === 'cart') { menu = (await api('/menu')).items; renderCart(); }
+    if (current === 'book') loadBookings();
+    if (current === 'orders') loadOrders();
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ----- menu ----- */
+function setCat(c) { cat = c; renderMenu(); }
+function renderMenu() {
+  document.getElementById('pills').innerHTML = CATS.map(c =>
+    `<button class="pill ${c === cat ? 'active' : ''}" onclick="setCat('${c}')">${CAT_ICON[c]} ${c}</button>`).join('');
+  const list = menu.filter(i => i.category === cat);
+  document.getElementById('menu-sections').innerHTML =
+    `<div class="section-title"><span class="gold">◈</span><h2>${cat}</h2><i></i></div>
+     <div class="grid">${list.map(card).join('') || '<p class="muted">No items yet.</p>'}</div>`;
+}
+function card(i) {
+  const q = sel[i.id] || 1;
+  return `<div class="card ${i.available ? '' : 'off'}">
+    <div class="thumb" data-emoji="${CAT_EMOJI[i.category] || '🍽'}">
+      ${i.image ? `<img src="${esc(i.image)}" alt="" onerror="this.remove()">` : ''}
+      <span class="price-badge mono">${money(i.price)}</span>
+      ${i.available ? '' : '<span class="ribbon">CURRENTLY UNAVAILABLE</span>'}
+    </div>
+    <div class="card-body">
+      <h3>${esc(i.name)}</h3><p class="muted small desc">${esc(i.description)}</p>
+      <div class="add-row">
+        <div class="stepper"><button onclick="step('${i.id}',-1)">−</button><span id="q-${i.id}">${q}</span><button onclick="step('${i.id}',1)">+</button></div>
+        <button class="btn grow" ${i.available ? '' : 'disabled'} onclick="addToCart('${i.id}')">Add</button>
+      </div>
+      <div class="mono muted tiny">Max ${i.maxPerOrder} per order</div>
+    </div></div>`;
+}
+function step(id, d) {
+  const m = menu.find(x => x.id === id);
+  const n = Math.min(m.maxPerOrder, Math.max(1, (sel[id] || 1) + d));
+  sel[id] = n; document.getElementById('q-' + id).textContent = n;
+}
+function addToCart(id) {
+  const m = menu.find(x => x.id === id);
+  const n = (cart[id] || 0) + (sel[id] || 1);
+  if (n > m.maxPerOrder) { toast('Max ' + m.maxPerOrder + ' per order for ' + m.name, 'err'); return; }
+  cart[id] = n; sel[id] = 1; document.getElementById('q-' + id).textContent = 1;
+  updateCount(); toast(m.name + ' added');
+}
+function updateCount() {
+  const n = Object.values(cart).reduce((a, b) => a + b, 0);
+  const c = document.getElementById('cart-count');
+  c.textContent = n; c.classList.toggle('hidden', n === 0);
+}
+
+/* ----- cart ----- */
+function chg(id, d) {
+  const m = menu.find(x => x.id === id); if (!m) { delete cart[id]; renderCart(); return; }
+  const n = (cart[id] || 0) + d;
+  if (n <= 0) delete cart[id];
+  else if (n > m.maxPerOrder) { toast('Max ' + m.maxPerOrder + ' per order', 'err'); return; }
+  else cart[id] = n;
+  updateCount(); renderCart();
+}
+function drawInfo() {
+  const t = document.getElementById('o-type').value, w = document.getElementById('o-info-wrap');
+  if (t === 'Dine-in') w.innerHTML = '<label>Table number</label><select id="o-info">' + [1,2,3,4,5,6,7,8,9,10].map(n => `<option>${n}</option>`).join('') + '</select>';
+  else if (t === 'Delivery') w.innerHTML = '<label>Delivery address</label><input id="o-info" placeholder="Full address">';
+  else w.innerHTML = '';
+}
+function renderCart() {
+  const ids = Object.keys(cart).filter(id => menu.find(m => m.id === id));
+  const box = document.getElementById('cart-lines'), form = document.getElementById('cart-form');
+  if (!ids.length) { box.innerHTML = '<p class="center muted">Your cart is empty. Add something delicious from the menu.</p>'; form.classList.add('hidden'); return; }
+  let sub = 0;
+  box.innerHTML = ids.map(id => {
+    const m = menu.find(x => x.id === id); sub += m.price * cart[id];
+    return `<div class="line big"><span>${esc(m.name)} <span class="muted small">${money(m.price)}</span></span>
+      <span class="stepper"><button onclick="chg('${id}',-1)">−</button><span>${cart[id]}</span><button onclick="chg('${id}',1)">+</button></span>
+      <b>${money(m.price * cart[id])}</b></div>`;
+  }).join('') +
+  `<div class="line"><span class="muted">Subtotal</span><span>${money(sub)}</span></div>
+   <div class="line"><span class="muted">GST (5%)</span><span>${money(sub * 0.05)}</span></div>
+   <div class="line"><b>Total</b><b class="gold">${money(sub * 1.05)}</b></div>`;
+  form.classList.remove('hidden');
+  if (!document.getElementById('o-info')) drawInfo();
+}
+async function placeOrder() {
+  const items = Object.entries(cart).map(([id, q]) => id + ':' + q).join(',');
+  const info = (document.getElementById('o-info') || {}).value || '';
+  try {
+    await api('/orders/place', { type: document.getElementById('o-type').value, info, items });
+    cart = {}; updateCount(); toast('Order placed! 🎉'); showView('orders');
+  } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ----- bookings ----- */
+(function initBookingForm() {
+  const d = document.getElementById('b-date'); d.min = today(); d.value = today();
+  const slots = []; for (let h = 12; h <= 22; h++) slots.push(String(h).padStart(2, '0') + ':00');
+  document.getElementById('b-time').innerHTML = slots.map(s => `<option>${s}</option>`).join('');
+  document.getElementById('b-guests').innerHTML = [1,2,3,4,5,6,7,8,9,10].map(n => `<option>${n}</option>`).join('');
+  document.getElementById('book-form').onsubmit = async e => {
+    e.preventDefault();
+    try {
+      const b = await api('/bookings/create', {
+        date: d.value, time: document.getElementById('b-time').value,
+        guests: document.getElementById('b-guests').value, phone: document.getElementById('b-phone').value });
+      toast('Table ' + b.tableNo + ' reserved (pending confirmation)'); loadBookings();
+    } catch (er) { toast(er.message, 'err'); }
+  };
+})();
+async function loadBookings() {
+  const list = (await api('/bookings/my')).items;
+  document.getElementById('my-bookings').innerHTML = list.map(b =>
+    bookingCard(b, ['Pending', 'Confirmed'].includes(b.status) ? `<button class="btn btn-sm btn-danger" onclick="cancelBooking('${b.id}')">Cancel</button>` : '')
+  ).join('') || '<p class="muted">No bookings yet.</p>';
+}
+async function cancelBooking(id) {
+  try { await api('/bookings/cancel', { id }); toast('Booking cancelled'); loadBookings(); } catch (e) { toast(e.message, 'err'); }
+}
+
+/* ----- orders ----- */
+async function loadOrders() {
+  orders = (await api('/orders/my')).items;
+  document.getElementById('my-orders').innerHTML = orders.map(o => {
+    let a = '';
+    if (o.billNo) a += `<button class="btn btn-sm btn-ghost" onclick="viewBill('${o.id}')">View bill</button>`;
+    if (o.status === 'Placed') a += `<button class="btn btn-sm btn-danger" onclick="cancelOrder('${o.id}')">Cancel</button>`;
+    return orderCard(o, a);
+  }).join('') || '<p class="muted">You have not ordered anything yet.</p>';
+}
+function viewBill(id) { showBill(orders.find(o => o.id === id)); }
+async function cancelOrder(id) {
+  try { await api('/orders/cancel', { id }); toast('Order cancelled'); loadOrders(); } catch (e) { toast(e.message, 'err'); }
+}
+</script>
+</body>
+</html>
